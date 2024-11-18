@@ -34,9 +34,17 @@ def stream_transcribe(max_duration=10):
     # Guarda o momento de início da transcrição
     start_time = time.time()
 
+    # Função para gerar pacotes de áudio, respeitando o tempo limite
+    def audio_stream():
+        while True:
+            elapsed_time = time.time() - start_time
+            if elapsed_time > max_duration:
+                break
+            yield stream.read(1024)
+
     # Gere os pedidos de áudio, que serão enviados à API em tempo real
     requests = (speech.StreamingRecognizeRequest(audio_content=content)
-                for content in iter(lambda: stream.read(1024), b""))
+                for content in audio_stream())
 
     # Faça a chamada para o streaming de reconhecimento
     responses = client.streaming_recognize(streaming_config, requests)
@@ -47,12 +55,6 @@ def stream_transcribe(max_duration=10):
             for result in response.results:
                 # Exibe a transcrição final ou parcial
                 print("Texto reconhecido: ", result.alternatives[0].transcript)
-                
-            # Verifique o tempo decorrido
-            elapsed_time = time.time() - start_time
-            if elapsed_time > max_duration:
-                print("Tempo limite atingido. Finalizando transcrição...")
-                break
     except Exception as e:
         print(f"Erro durante a transcrição: {e}")
 
